@@ -106,7 +106,7 @@ class Playfield:
                     self._grid[row][column].state = 'sunk'
                 self._ships.pop(index)
 
-            return True    gvgvbgb
+            return True
 
     def try_to_place_ship(self, ship): #todo test
         """Checks if space to be occupied by ship (and adjacent space) is free. Raises GameLogicError otherwise"""
