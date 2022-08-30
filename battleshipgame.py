@@ -1,5 +1,6 @@
 """"""
 from random import choice, randint
+import copy
 
 
 
@@ -12,10 +13,19 @@ class GameLogicError(Exception):
 class GameInitError(Exception):
     pass
 
+class FoundValidPlacement(Exception):
+    pass
+
+
+class IterationSuccess(Exception):
+    pass
+
+class GameOverException(Exception):
+    pass
 
 class Dot:
     """"""
-    _state = None
+    #_state = None
     def __init__(self, state):
         self.state = state
 
@@ -39,13 +49,11 @@ class Dot:
 
 class Playfield:
     """"""
-    _grid = []
-    _size = None
-    _ships = []
+
 
     def __init__(self, size):
         # It is assumed, that size is checked for validity during Battleship.__init__
-
+        self._grid = []
 
 
         self._size = size
@@ -53,6 +61,7 @@ class Playfield:
             self._grid.append([])
             for _ in range(size):
                 self._grid[i].append(Dot('empty'))
+        self._ships = []
 
 
     @property
@@ -98,11 +107,12 @@ class Playfield:
             raise MoveInvalidError(f"Couldn't play this move since {row, column} was already {cell.state}")
         # Missed. Change cell state and return False
         elif cell.state == 'empty':
-            cell.state = 'checked'
+            self._grid[row][column].state = 'checked'
+            #self.printgrid()
             return False
         #Hit. Change cell state and...
         elif cell.state == 'occupied':
-            cell.state = 'hit' # todo willitwork
+            self._grid[row][column].state = 'hit' # todo willitwork
             # ...figure out which ship was hit and ...
             for index, ship in enumerate(self._ships):
                 if ship.was_hit(row, column):
@@ -114,7 +124,7 @@ class Playfield:
                 for row, column in ship.return_area():
                     self._grid[row][column].state = 'sunk'
                 self._ships.pop(index)
-
+            #self.printgrid()
             return True
 
     def try_to_place_ship(self, ship): #todo test
@@ -230,6 +240,7 @@ class Player():
         self._setup_complete = False
         self._playfield = None  # Playfield()
         self._unplaced_ships = []
+        self._size = gridsize
 
 
         self._playfield = Playfield(gridsize)
@@ -239,23 +250,93 @@ class Player():
                 self._unplaced_ships.append(Ship(4-ship_minus_size))
                 print(len(self._unplaced_ships))
 
+    def place_ships_randomly(self):
+        max=self._playfield.size - 1
+        playfield_copy = copy.deepcopy(self._playfield)  # this allows us to partially set up the ships by
+                                                    # hand and only fill the rest
+        try:  # sooooooooo
+            for num_reshufles in range(40):  # do 40 attempts
+                self._playfield = copy.deepcopy(playfield_copy) # re-init playfield for each attempt
+                generator_func = self.iter_unplaced_ships() # restarting generator for each attempt
+                for ship in generator_func:  # of itering through every ship
+                    for attempts_to_place_current_ship in range(100):  # and trying 100 random placements
+                        ship.configure(randint(0, max), randint(0, max), choice((True, False)))  # randomizing it
+                        try:
+                            self._playfield.try_to_place_ship(ship)
+                        except GameLogicError:
+                            continue  # next attempt
+                        #self._playfield.printgrid()
+                        break  # on successful ship placement
+                    else:  # if no successful ship placement:
+                        break  # for ship loop and start over
+                else:  # if nothing breaked for ship loop we're done
+                    break  # out of for num_reshufles loop
+
+        except IterationSuccess:
+             print (f'Passed, {num_reshufles+1} attempts')
+             self._unplaced_ships = []
+
+             return
+        else:
+            raise GameInitError(f'Failed, to place ships after {num_reshufles + 1} attempts')
+
+
+    @property
+    def count_ships(self):
+        return len(self._playfield._ships)
+    @property
+    def count_unplaced_ships(self):
+        return len(self._unplaced_ships)
+
     def iter_ships(self): #todo why? nvm it's ok
-        for i in len(self._playfield._ships):
-            yield self._playfield._ships[i]
-        raise StopIteration
+        for ship in sorted(self._playfield._ships, key=lambda x: x.size, reverse=True):
+            yield ship
+        raise IterationSuccess('No more ships!')
+
     def iter_unplaced_ships(self): #todo why? nvm it's ok but will it work if ships are popped in process?
-        for i in len(self._unplaced_ships):
-            yield self._unplaced_ships[i]
-        raise StopIteration
+        for ship in sorted(self._unplaced_ships, key=lambda x: x.size, reverse=True):
+            yield ship
+        raise IterationSuccess('No more unplaced ships!')
+
+    def configure(self):
+        pass #todo
+
+    def attemt_to_place_ship(self, index):
+    # similar to playfield method, but deletes ship from unplaced_ships on success
+        try:
+            self._playfield.try_to_place_ship(self._unplaced_ships[index])
+        except TypeError:
+            raise GameInitError('Bad index')
+
+
+
+    def try_ai_move(self):
+        for i in range(1024):
+            try:
+                return self._playfield.try_move(randint(0,self._size))
+            except MoveInvalidError:
+                pass
+            else:
+                continue
+        else:
+            raise GameLogicError('AI was unable to hit anything, dumdum!')
+
+
+
+
 
 class AiPlayer(Player):
 
     def __init__(self, size, ships):
         super().__init__(size, ships)
+        self.place_ships_randomly()
+
         pass
     def _init_ships(self, size, ships):
 
         pass
+    def try_human_move(self, row, column):
+        return self._playfield.try_move(row, column)
 
 class HumanPlayer(Player):
 
@@ -286,12 +367,47 @@ class BattleShipGame():
         sum_ships = 0
         for i in range(0, len(ships)):
             sum_ships += ships[i] * (4 - i)
-        if sum_ships > size * size * 0.25:
-            raise GameInitError(f"Ships can't occupy more than 25% of playfield")
+        if sum_ships > size * size * 0.33:
+            raise GameInitError(f"Ships can't occupy more than 33% of playfield")
+        # If all is golden, initialize Ai player and Human player
         self.human_player = HumanPlayer(size, ships)
         self.ai_player = AiPlayer(size, ships)
+        self._game_started = False
+        self._game_winner = None
 
-        # If all is golden, initialize Ai player and Human player
+    def start(self):
+        if self.human_player.count_unplaced_ships != 0:
+            raise GameInitError(f'Pesky human failed to place all his ships!')
+        else:
+            self._game_started = True
+
+    @property
+    def has_winner(self):
+        return self._game_winner
+    def make_a_human_move(self, i, j):
+        # error_checking?
+        if self._game_started and not self._game_winner:
+            result = self.ai_player.try_human_move(i, j)
+            if self.ai_player.count_ships == 0:
+                self._game_winner = 'Human'
+                raise GameOverException(f"{self._game_winner} won this game!")
+            return result
+    def make_an_ai_move(self):
+        if self._game_started and not self._game_winner:
+            result = True
+            while True:
+                result = self.human_player.try_ai_move()
+                if result:
+                    yield True
+                else:
+                    if self.human_player.count_ships == 0:
+                        self._game_winner = 'AI'
+                        raise GameOverException(f"{self._game_winner} won this game!")
+                    return
+
+
+
+
 
 
 
@@ -312,12 +428,21 @@ if __name__ == '__main__':
     # a.try_move(7, 3)
     # a.printgrid()
     #print(a._ships[0])
-    g = BattleShipGame(10, (1,2,3,4))
+    g = BattleShipGame(8, (1,2,3,4))
     for i in range(len(g.ai_player._unplaced_ships)):
         print(g.human_player._unplaced_ships[i]._size, end=' ')
     print('')
     for i in range(len(g.ai_player._unplaced_ships)):
          print(g.human_player._unplaced_ships[i]._size, end=' ')
+    print('')
+    g.ai_player._playfield.printgrid()
+    g.ai_player._unplaced_ships[0].configure(0, 0, True)
+    g.ai_player._playfield.try_to_place_ship( g.ai_player._unplaced_ships[0])
+    g.ai_player._unplaced_ships.pop(0)
+    g.ai_player.place_ships_randomly()
+    #g.ai_player.place_ships_randomly()
+
+    g.ai_player._playfield.printgrid()
 
 
 
