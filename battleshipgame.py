@@ -1,4 +1,5 @@
 """"""
+from random import choice, randint
 
 
 
@@ -7,6 +8,8 @@
 class MoveInvalidError(Exception):
     pass
 class GameLogicError(Exception):
+    pass
+class GameInitError(Exception):
     pass
 
 
@@ -41,14 +44,14 @@ class Playfield:
     _ships = []
 
     def __init__(self, size):
-        if not(isinstance(size, int)):
-            raise TypeError(f'An int is expected here, got {type(size)} instead')
-        if not (3 <= size <=20):
-            raise ValueError(f'Size of playfield is too {("big", "small")[size<3]}! Valid range is [3, 20]')
+        # It is assumed, that size is checked for validity during Battleship.__init__
+
+
+
         self._size = size
         for i in range(size):
             self._grid.append([])
-            for j in range(size):
+            for _ in range(size):
                 self._grid[i].append(Dot('empty'))
 
 
@@ -62,13 +65,17 @@ class Playfield:
 
     def printgrid(self):  #for debug purposes
         charset = {'e': '.  ', 'o': 'O  ', 'h': 'X  ', 's': '#  ', 'c': 'o  ' }
-        for row in self._grid:
+        print('   ', end='')
+        [print(n, end='  ') for n in range(len(self._grid))]
+        print('')
+        for index, row in enumerate(self._grid):
+            print(index, end='  ')
             [print(charset[point.state[0]], end='') for point in row]
             print('')
         print('')
 
     @staticmethod
-    def _transposed(grid):
+    def _transposed(grid): #todo same as below
         return list(zip(*grid))
 
     def row(self, row):
@@ -81,6 +88,8 @@ class Playfield:
 
 
     def try_move(self, row, column):
+        if not isinstance(row, int) or not isinstance(column, int):
+            raise MoveInvalidError(f'Both row and column must be int, not {type(row)} and {type(column)}')
         try:
             cell = self._grid[row][column]
         except IndexError:
@@ -159,22 +168,22 @@ class Playfield:
 
 
 class Ship:
-    _hp=None
-    _size=None
-    _vertical=None
-    _row=None
-    _column=None
-    # todo think _occupied_area=[]
+
 
     def __init__(self, size):
         if not isinstance(size, int):
-            raise TypeError(f"Ship's size must be an int.")
+            raise GameLogicError(f"Ship's size must be an int.")
         if size in range(1, 5):
             self._size = size
             self._hp = size
         else:
             raise GameLogicError(f"Can't make a ship with size {size}. Possible sizes are {(range(1, 5))}")
-        pass
+        # self._hp = None
+        # self._size = None
+        self._vertical = None
+        self._row = None
+        self._column = None
+        # todo think _occupied_area=[]
     @property
     def hp(self): return self._hp
 
@@ -215,50 +224,103 @@ class Ship:
             return True
 
 class Player():
-    _ships = []
-    def __init__(self, name):
-        pass
-    def _iter_ships(self): #todo why?
-        for i in len(self._ships):
-            yield self._ships[i]
+
+    def __init__(self, gridsize, ships):
+        # gridsize and ships are assumed to be correct
+        self._setup_complete = False
+        self._playfield = None  # Playfield()
+        self._unplaced_ships = []
+
+
+        self._playfield = Playfield(gridsize)
+        print(f'player.__init__ was called !')
+        for ship_minus_size, ship_count in enumerate(ships):
+            for _ in range(ship_count):
+                self._unplaced_ships.append(Ship(4-ship_minus_size))
+                print(len(self._unplaced_ships))
+
+    def iter_ships(self): #todo why? nvm it's ok
+        for i in len(self._playfield._ships):
+            yield self._playfield._ships[i]
+        raise StopIteration
+    def iter_unplaced_ships(self): #todo why? nvm it's ok but will it work if ships are popped in process?
+        for i in len(self._unplaced_ships):
+            yield self._unplaced_ships[i]
         raise StopIteration
 
 class AiPlayer(Player):
 
-    def __init__(self):
+    def __init__(self, size, ships):
+        super().__init__(size, ships)
         pass
-    def _init_ships(self,):
+    def _init_ships(self, size, ships):
+
         pass
 
+class HumanPlayer(Player):
 
+    def __init__(self, size, ships):
+        super().__init__(size, ships)
+        pass
+    def _init_ships(self, **kwargs):
+
+        pass
 
 class BattleShipGame():
-    def __init__(self, config ):
-        pass
+    def __init__(self, size, ships):
+        # Checking size
+        if not (isinstance(size, int)):
+            raise GameInitError(f'An int is expected here, got {type(size)} instead')
+        if not (3 <= size <= 20):
+            raise GameInitError(f'Size of playfield is too {("big", "small")[size < 3]}! Valid range is [3, 20]')
+
+        # Checking ship config
+        if not (isinstance(ships, tuple) or isinstance(ships, list)):
+            raise GameInitError(f'Expected list or tuple of four ship counts, got something else: '
+                                f'({type(ships), ships})')
+        if len(ships) != 4:
+            raise GameInitError(f'Expected exactly four ship counts, got {len(ships)}')
+        for i in ships:
+            if not isinstance(i, int):
+                raise GameInitError(f'{i} is not a valid number of ships! Expecting int, 0 or more.')
+        sum_ships = 0
+        for i in range(0, len(ships)):
+            sum_ships += ships[i] * (4 - i)
+        if sum_ships > size * size * 0.25:
+            raise GameInitError(f"Ships can't occupy more than 25% of playfield")
+        self.human_player = HumanPlayer(size, ships)
+        self.ai_player = AiPlayer(size, ships)
+
+        # If all is golden, initialize Ai player and Human player
+
 
 
 
 if __name__ == '__main__':
-    a = Playfield(8)
-    a.try_move(2, 0)
-    a.printgrid()
-    s = Ship(4)
-    s.configure(4, 3, True)
-    a.try_to_place_ship(s)
-    a.printgrid()
-    a.try_move(4, 3)
-    a.try_move(5, 3)
-    a.try_move(6, 3)
-    a.printgrid()
-    print(list(sorted(a._calculate_ship_surroundings(a._ships[0]))))
-    a.try_move(7, 3)
-    a.printgrid()
-    print(a._ships[0])
+    # a = Playfield(8)
+    # a.try_move(0, 0)
+    # a.printgrid()
+    # s = Ship(4)
+    # s.configure(4, 3, True)
+    # a.try_to_place_ship(s)
+    # a.printgrid()
+    # a.try_move(4, 3)
+    # a.try_move(5, 3)
+    # a.try_move(6, 3)
+    # a.printgrid()
+    # print(list(sorted(a._calculate_ship_surroundings(a._ships[0]))))
+    # a.try_move(7, 3)
+    # a.printgrid()
+    #print(a._ships[0])
+    g = BattleShipGame(10, (1,2,3,4))
+    for i in range(len(g.ai_player._unplaced_ships)):
+        print(g.human_player._unplaced_ships[i]._size, end=' ')
+    print('')
+    for i in range(len(g.ai_player._unplaced_ships)):
+         print(g.human_player._unplaced_ships[i]._size, end=' ')
 
-    #print(str(a.column(3)[2].state))
-    #a._grid[3][3].state = 'sunk'
 
-    #a.try_move(3, 3)
+
 
     print("""Hey you tried to launch this file directly! This won't work!
     This file contains logic for running a battleship game.

@@ -1,4 +1,4 @@
-"""User is fully responsible for any changes to this file"""
+"""User is fully responsible for breaking the game by changing this file =)"""
 configs = []
 configs[0] = {
         'name': 'express',
