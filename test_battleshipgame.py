@@ -104,14 +104,14 @@ class TestPlayfield(unittest.TestCase):
                                          (row in playfieldedges) * (size + 2) - \
                                          (column in maxoffsetedges) * 3 + \
                                          ((row in playfieldedges) and (column in maxoffsetedges))
-                    testshipsurroundings = test._calculate_ship_surroundings(testship)
+                    testshipsurroundings = test.calculate_ship_surroundings(testship)
                     self.assertEqual(len(testshipsurroundings), numberofneighbours, msg=f'unflipped{row,column,size}\n')
 
                     # swapping rows and collumns for vertical ships
                     testship._row, testship._column = testship._column, testship._row
                     testship._vertical = True
 
-                    testshipsurroundings = test._calculate_ship_surroundings(testship)
+                    testshipsurroundings = test.calculate_ship_surroundings(testship)
                     self.assertEqual(len(testshipsurroundings), numberofneighbours, msg=f'flipped{column,row,size}\n')
 
 

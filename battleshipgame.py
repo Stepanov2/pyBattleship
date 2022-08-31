@@ -62,6 +62,7 @@ class Playfield:
             for _ in range(size):
                 self._grid[i].append(Dot('empty'))
         self._ships = []
+        self.recently_sunk_ship = None
 
 
     @property
@@ -83,16 +84,7 @@ class Playfield:
             print('')
         print('')
 
-    @staticmethod
-    def _transposed(grid): #todo same as below
-        return list(zip(*grid))
 
-    def row(self, row):
-        # todo errorchecking and see if i need these at all
-        return self._grid[row]
-
-    def column(self, column):
-        return self._transposed(self._grid)[column]
 
 
 
@@ -119,10 +111,11 @@ class Playfield:
                     break
             #...If it sunk mark surrounding area as 'checked', mark ship as sunk and remove ship from the list
             if self._ships[index].hp == 0:
-                for row, column in self._calculate_ship_surroundings(self._ships[index]):
+                for row, column in self.calculate_ship_surroundings(self._ships[index]):
                     self._grid[row][column].state = 'checked'
                 for row, column in ship.return_area():
                     self._grid[row][column].state = 'sunk'
+                self.recently_sunk_ship = copy.deepcopy(ship)
                 self._ships.pop(index)
             #self.printgrid()
             return self._grid[row][column].state
@@ -135,7 +128,7 @@ class Playfield:
 
         # Checking if playfield is sufficiently empty
         # Trigger warning: "try, except" abuse
-        for row, column in set(ship.return_area()).union(set(self._calculate_ship_surroundings(ship))):
+        for row, column in set(ship.return_area()).union(set(self.calculate_ship_surroundings(ship))):
             try:
                 condition = self._grid[row][column].state != 'empty'
             except IndexError:
@@ -159,7 +152,7 @@ class Playfield:
     def sink_ship(self, ship): #todo ???
         pass
 
-    def _calculate_ship_surroundings(self, ship):
+    def calculate_ship_surroundings(self, ship):
         indexes = ship.return_area()
         output=[]
         for row, column in indexes:
@@ -244,12 +237,15 @@ class Player():
 
 
         self._playfield = Playfield(gridsize)
-        print(f'player.__init__ was called !')
+        #print(f'player.__init__ was called !')
         for ship_minus_size, ship_count in enumerate(ships):
             for _ in range(ship_count):
                 self._unplaced_ships.append(Ship(4-ship_minus_size))
-                print(len(self._unplaced_ships))
+                #print(len(self._unplaced_ships))
 
+    @property
+    def get_sunk_ship(self):
+        return self._playfield.recently_sunk_ship
     def place_ships_randomly(self):
         max=self._playfield.size - 1
         playfield_copy = copy.deepcopy(self._playfield)  # this allows us to partially set up the ships by
@@ -411,36 +407,36 @@ class BattleShipGame():
 
 
 if __name__ == '__main__':
-    # a = Playfield(8)
-    # a.try_move(0, 0)
-    # a.printgrid()
-    # s = Ship(4)
-    # s.configure(4, 3, True)
-    # a.try_to_place_ship(s)
-    # a.printgrid()
-    # a.try_move(4, 3)
-    # a.try_move(5, 3)
-    # a.try_move(6, 3)
-    # a.printgrid()
-    # print(list(sorted(a._calculate_ship_surroundings(a._ships[0]))))
-    # a.try_move(7, 3)
-    # a.printgrid()
-    #print(a._ships[0])
-    g = BattleShipGame(8, (1,2,3,4))
-    for i in range(len(g.ai_player._unplaced_ships)):
-        print(g.human_player._unplaced_ships[i]._size, end=' ')
-    print('')
-    for i in range(len(g.ai_player._unplaced_ships)):
-         print(g.human_player._unplaced_ships[i]._size, end=' ')
-    print('')
-    g.ai_player._playfield.print_grid()
-    g.ai_player._unplaced_ships[0].configure(0, 0, True)
-    g.ai_player._playfield.try_to_place_ship( g.ai_player._unplaced_ships[0])
-    g.ai_player._unplaced_ships.pop(0)
-    g.ai_player.place_ships_randomly()
-    #g.ai_player.place_ships_randomly()
-
-    g.ai_player._playfield.print_grid()
+    # # a = Playfield(8)
+    # # a.try_move(0, 0)
+    # # a.printgrid()
+    # # s = Ship(4)
+    # # s.configure(4, 3, True)
+    # # a.try_to_place_ship(s)
+    # # a.printgrid()
+    # # a.try_move(4, 3)
+    # # a.try_move(5, 3)
+    # # a.try_move(6, 3)
+    # # a.printgrid()
+    # # print(list(sorted(a._calculate_ship_surroundings(a._ships[0]))))
+    # # a.try_move(7, 3)
+    # # a.printgrid()
+    # #print(a._ships[0])
+    # g = BattleShipGame(8, (1,2,3,4))
+    # for i in range(len(g.ai_player._unplaced_ships)):
+    #     print(g.human_player._unplaced_ships[i]._size, end=' ')
+    # print('')
+    # for i in range(len(g.ai_player._unplaced_ships)):
+    #      print(g.human_player._unplaced_ships[i]._size, end=' ')
+    # print('')
+    # g.ai_player._playfield.print_grid()
+    # g.ai_player._unplaced_ships[0].configure(0, 0, True)
+    # g.ai_player._playfield.try_to_place_ship( g.ai_player._unplaced_ships[0])
+    # g.ai_player._unplaced_ships.pop(0)
+    # g.ai_player.place_ships_randomly()
+    # #g.ai_player.place_ships_randomly()
+    #
+    # g.ai_player._playfield.print_grid()
 
 
 
