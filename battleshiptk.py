@@ -79,7 +79,7 @@ class TkinterBattleship(battleshipgame.BattleShipGame):
         except battleshipgame.GameInitError as e:
             print(e)
             quit(1)
-        self.setup_player._playfield.print_grid()
+        #self.setup_player._playfield.print_grid()
 
         self.hovered_ship=battleshipgame.Ship(1)
         btn_width = kwargs['tkinterconfig']['btn_width']

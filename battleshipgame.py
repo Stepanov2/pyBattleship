@@ -23,6 +23,9 @@ class IterationSuccess(Exception):
 class GameOverException(Exception):
     pass
 
+class FoundGoodMove(Exception):
+    pass
+
 class Dot:
     """"""
     #_state = None
@@ -317,18 +320,13 @@ class AiPlayer(Player):
         self.place_ships_randomly()
 
         pass
-    def _init_ships(self, size, ships):
 
-        pass
 
 
 class HumanPlayer(Player):
 
     def __init__(self, size, ships):
         super().__init__(size, ships)
-        pass
-    def _init_ships(self, **kwargs):
-
         pass
 
 class BattleShipGame():
@@ -379,17 +377,87 @@ class BattleShipGame():
             return result
     def make_an_ai_move(self):
         if self._game_started and not self._game_winner:
-            for _ in range(1024):
-                move=(randint(0, self._size), randint(0, self._size))
-                try:
-                    result =  self.human_player.try_move(*move)
-                except MoveInvalidError:
-                    continue
-                else:
-                    break
-            else: # no break
-                raise GameOverException('AI was unable to make a move, stupid AI!')
-            #result = self.human_player.try_ai_move()
+            try:
+
+                """
+                1. находим подбитую клетку
+                2. если у подбитой клетки нет подбитых соседей, бьем в первого occupied или empty соседа
+                3. если у клетки есть подбитый сосед, то проверяем противоположенного соседа в этом направлении, 
+                если он occupied или empty, бьём туда
+                4. если он тоже hit, проверям следующего соседа.
+                5. он должен быть occupied или empty, иначе логика, помечающая корабли, как затонувшие не работает.
+                """
+
+
+                grid=self.human_player._playfield.grid
+                for rowindex, row in enumerate(grid):
+                    for cellindex, cell in enumerate(row):
+                        if cell.state == 'hit':  # step 1
+                            neighbours = self.get_neighbours(rowindex, cellindex)
+                            for neighbour in neighbours: # step 2
+                                if grid[neighbour[0]][neighbour[1]].state in ("empty", "occupied", "checked"):  # no cheating here=)
+                                    continue
+                                break
+                            else: #nobreak all neighbours aren't checked yet
+                                for i, j in neighbours:
+                                    if grid[i][j].state != "checked":
+                                        move = (i,j)
+                                        print('No neighbours')
+                                        raise FoundGoodMove
+
+                            for neighbour in neighbours: # prep for step 3
+                                if grid[neighbour[0]][neighbour[1]].state == 'hit':
+                                    diff_row = neighbour[0] - rowindex
+                                    diff_column = neighbour[1] - cellindex
+                                    break
+                            try: # step 3
+                                _ = grid[rowindex - diff_row][cellindex-diff_column]
+
+                            except IndexError:
+                                pass
+                            else:
+                                if not(grid[rowindex - diff_row][cellindex - diff_column].state in \
+                                        ("occupied", "checked")):
+                                    move = (rowindex - diff_row, cellindex - diff_column)
+                                    print('No neighbours')
+                                    raise FoundGoodMove
+                            # step 4
+                            try:
+                                _ = grid[rowindex + diff_row][cellindex + diff_column]
+
+                            except IndexError:
+                                pass
+                            else:
+                                if not(grid[rowindex + diff_row][cellindex + diff_column].state in \
+                                        ("occupied", "checked")):
+                                    move = (rowindex + diff_row, cellindex + diff_column)
+                                    raise FoundGoodMove
+                            # step 5
+                            try:
+                                _ = grid[rowindex - 2 * diff_row][cellindex - 2 * diff_column]
+
+                            except IndexError:
+                                pass
+                            else:
+                                if not(grid[rowindex - 2 * diff_row][cellindex - 2 * diff_column].state in \
+                                        ("occupied", "checked")):
+                                    move = (rowindex - 2 * diff_row, cellindex - 2 * diff_column)
+                                    raise FoundGoodMove
+
+            except FoundGoodMove:
+                result = self.human_player.try_move(*move)
+            else:
+                for _ in range(2048):
+                    move=(randint(0, self._size), randint(0, self._size))
+                    try:
+                        result =  self.human_player.try_move(*move)
+                    except MoveInvalidError:
+                        continue
+                    else:
+                        break
+                else: # no break
+                    raise GameOverException('AI was unable to make a move, stupid AI!')
+
             if result != 'sunk':
                 return [result, move]
             else:
@@ -397,6 +465,14 @@ class BattleShipGame():
                     self._game_winner = 'AI'
                     raise GameOverException(f"{self._game_winner} won this game!")
                 return [result, move]
+
+
+    def get_neighbours(self, row, column):
+        output = [(row-1, column), (row+1, column), (row, column-1), (row, column+1)]
+        for index, value in enumerate(output):
+            if not (0 <= value[0] < self._size) or not (0 <= value[1] < self._size):
+                output.pop(index)
+        return output
 
 
 
