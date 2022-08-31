@@ -29,75 +29,100 @@ class ConsoleBattleship(battleshipgame.BattleShipGame):
         _CHARSET_ENEMY = {'e': '.  ', 'o': '.  ', 'h': 'X  ', 's': '#  ', 'c': 'o  '}
         self._print_proto(self.ai_player._playfield.grid, _CHARSET_ENEMY)
 
+    def main_loop(self):
+        game.print_own()
+        print('Your ships! Starting in 3')
+        sleep(3)
+        aiturn = ['', (-1, -1)]
+        try:
+            while True:
+                playerturn = ''
+                print("It's your turn!")
+                # sleep(1)
+                while playerturn != 'checked':
+                    if not playerturn:
+                        self.print_enemy()
+                    playerinput = input('Your move: ')
+                    try:
+                        row, column = playerinput.split(maxsplit=2)
+
+                        playerturn = self.make_a_human_move(int(row), int(column))
+                    except battleshipgame.MoveInvalidError as e:
+                        self.print_enemy()
+                        print(e)
+                        continue
+                    except ValueError:
+                        self.print_enemy()
+                        print(f'{playerinput} is not a valid turn. Try again! ')
+                        continue
+                    self.print_enemy()
+                    print((playerturn.upper() if playerturn != 'checked' else 'MISS!') + '! ')
+                    if playerturn == "checked":
+                        sleep(2)
+
+                # ========= Ai's turn ===============
+                self.print_own()
+                print("It's computer's turn!")
+                # sleep(1)
+                aiturn[0] = ''
+                while aiturn[0] != 'checked':
+                    aiturn = self.make_an_ai_move()
+                    print(f"Computer goes {aiturn[1]}")
+                    sleep(2)
+                    self.print_own()
+                    print((aiturn[0].upper() if aiturn[0] != 'checked' else 'MISS') + '! ')
+                    sleep(2)
+
+        except battleshipgame.GameOverException as e:
+            print(e)
+            return
+
 
 
 
 # ======== chosing game parameters ========
 
 
+# ¯\_(ツ)_/¯
+
+
 #========= init game ======================
-print(configs[1])
-try:
-    game = ConsoleBattleship(**configs[1])
-except battleshipgame.GameInitError as e:
-    print(e)
-    print('Someone must have tinkered with config.py')
-    quit(1)
-
-#========= query player ships ============
-
-game.human_player.place_ships_randomly() # temp
+while True:
 
 
-try:
-    game.start()
-except battleshipgame.GameInitError:
-    quit(42)
+    try:
+        game = ConsoleBattleship(**configs[1])
+    except battleshipgame.GameInitError as e:
+        print(e)
+        print('Someone must have tinkered with config.py!')
+        quit(1)
 
-game.print_own()
-print('Your ships! Starting in 3')
-sleep(3)
-aiturn = ['', (-1, -1)]
-try:
-    while True:
-        playerturn = ''
-        print("It's your turn!")
-        #sleep(1)
-        while playerturn != 'checked':
-            if not playerturn:
-                game.print_enemy()
-            playerinput = input('Your move: ')
-            try:
-                row, column = playerinput.split(maxsplit=2)
+    #========= query player ships ============
 
-                playerturn = game.make_a_human_move(int(row), int(column))
-            except battleshipgame.MoveInvalidError as e:
-                game.print_enemy()
-                print(e)
-                continue
-            except ValueError:
-                game.print_enemy()
-                print(f'{playerinput} is not a valid turn. Try again! ')
-                continue
-            game.print_enemy()
-            print((playerturn.upper() if playerturn != 'checked' else 'MISS!') + '! ')
-            if playerturn == "checked":
-                sleep(2)
+    game.human_player.place_ships_randomly() # temp
 
 
-        # ========= Ai's turn ===============
+    try:
+        game.start()
+    except battleshipgame.GameInitError:
+        quit(42)
+
+    game.main_loop()
+
+    #========game.ended=========
+    if game.winner == 'Human':
+        game.print_enemy()
+        print("You've won, pal! Congrats!")
+    else:
         game.print_own()
-        print("It's computer's turn!")
-        #sleep(1)
-        aiturn[0] = ''
-        while aiturn[0] != 'checked':
-            aiturn = game.make_an_ai_move()
-            print(f"Computer goes {aiturn[1]}")
-            sleep(2)
-            game.print_own()
-            print((aiturn[0].upper() if aiturn[0] != 'checked' else 'MISS') + '! ')
-            sleep(2)
+        print("You've lost, pal! Touch luck!")
+    while True:
+        query = input("Press enter to quit or type \"MORE\" to play again")
+        if not query.upper() in ('', 'MORE'):
+            continue
+        if query == '':
+            quit(0)
+        if query.upper() == 'MORE':
+            break
 
-except battleshipgame.GameOverException as e:
-    print (e)
-    quit(0)
+

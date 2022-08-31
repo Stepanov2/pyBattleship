@@ -371,7 +371,7 @@ class BattleShipGame():
             self._game_started = True
 
     @property
-    def has_winner(self):
+    def winner(self):
         return self._game_winner
     def make_a_human_move(self, i, j):
         # error_checking?
