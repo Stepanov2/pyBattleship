@@ -33,11 +33,11 @@ configs.append({
 configs.append({
         'name': 'epic',
         'grid_size': 13,
-        'ships': (2, 3, 5, 7),
+        'ships': (3, 4, 5, 7),
         'tkinterconfig': {
             'btn_width': 4,
             'btn_height': 2,
-            'description': "An epic game on a 13x13 field with 17 ships per player. Bring hot cocoa!",
+            'description': "An epic game on a 13x13 field with 19 ships per player. Bring hot cocoa!",
             'win_height' : 540
         }
     })

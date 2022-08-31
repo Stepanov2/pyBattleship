@@ -1,6 +1,7 @@
 """"""
 from random import choice, randint
 import copy
+from math import copysign
 
 
 
@@ -375,6 +376,29 @@ class BattleShipGame():
                 self._game_winner = 'Human'
                 raise GameOverException(f"{self._game_winner} won this game!")
             return result
+    @classmethod
+    def search_for_good_move(cls, grid, initial_row, initial_column, diff_row, diff_column):
+        if abs(diff_row) > 3 or abs(diff_column) > 3:
+            return None # searching too far
+        try:  # step 3
+            _ = grid[initial_row + diff_row][initial_column + diff_column]
+
+        except IndexError:
+            return None # searching outside grid
+        else:
+            if grid[initial_row + diff_row][initial_column + diff_column].state in ("occupied", "empty"):
+                move = (initial_row + diff_row, initial_column + diff_column)      # still no cheating
+                return move # we struck gold
+
+            elif grid[initial_row - diff_row][initial_column - diff_column].state == 'checked':
+                return None # this cell is outside current ship
+            else: #searching deeper
+                return cls.search_for_good_move(grid, initial_row, initial_column,
+                                            int(diff_row + copysign(1, diff_row)) if diff_row else 0 ,
+                                            int(diff_column + copysign(1, diff_column)) if diff_column else 0)
+
+
+
     def make_an_ai_move(self):
         if self._game_started and not self._game_winner:
             try:
@@ -382,10 +406,11 @@ class BattleShipGame():
                 """
                 1. находим подбитую клетку
                 2. если у подбитой клетки нет подбитых соседей, бьем в первого occupied или empty соседа
-                3. если у клетки есть подбитый сосед, то проверяем противоположенного соседа в этом направлении, 
-                если он occupied или empty, бьём туда
-                4. если он тоже hit, проверям следующего соседа.
-                5. он должен быть occupied или empty, иначе логика, помечающая корабли, как затонувшие не работает.
+                3. если у клетки есть подбитый сосед, то в том же направлении ищем либо 
+                -свободную клетку и фигачим по ней
+                -проверенную клетку или конец поля и прекращаем поиск.
+                4. то же, но в обратном направлении.
+                5. 
                 """
 
 
@@ -395,57 +420,39 @@ class BattleShipGame():
                         if cell.state == 'hit':  # step 1
                             neighbours = self.get_neighbours(rowindex, cellindex)
                             for neighbour in neighbours: # step 2
-                                if grid[neighbour[0]][neighbour[1]].state in ("empty", "occupied", "checked"):  # no cheating here=)
+                                if not (grid[neighbour[0]][neighbour[1]].state == 'hit'): #in ("empty", "occupied", "checked"):
                                     continue
                                 break
-                            else: #nobreak all neighbours aren't checked yet
+                            else: #nobreak all neighbours aren't hit yet
                                 for i, j in neighbours:
                                     if grid[i][j].state != "checked":
                                         move = (i,j)
                                         print('No neighbours')
                                         raise FoundGoodMove
 
-                            for neighbour in neighbours: # prep for step 3
+                            for neighbour in neighbours: # prep for step 3 and 4 figuring out ship direction
                                 if grid[neighbour[0]][neighbour[1]].state == 'hit':
-                                    diff_row = neighbour[0] - rowindex
+                                    diff_row =  neighbour[0] - rowindex
                                     diff_column = neighbour[1] - cellindex
                                     break
-                            try: # step 3
-                                _ = grid[rowindex - diff_row][cellindex-diff_column]
-
-                            except IndexError:
-                                pass
-                            else:
-                                if not(grid[rowindex - diff_row][cellindex - diff_column].state in \
-                                        ("occupied", "checked")):
-                                    move = (rowindex - diff_row, cellindex - diff_column)
-                                    print('No neighbours')
-                                    raise FoundGoodMove
+                            # step 3
+                            move = BattleShipGame.search_for_good_move(grid,
+                                                                       rowindex + diff_row,
+                                                                       cellindex + diff_column,
+                                                                       diff_row, diff_column)
+                            if not move is None:
+                                raise FoundGoodMove
                             # step 4
-                            try:
-                                _ = grid[rowindex + diff_row][cellindex + diff_column]
-
-                            except IndexError:
-                                pass
-                            else:
-                                if not(grid[rowindex + diff_row][cellindex + diff_column].state in \
-                                        ("occupied", "checked")):
-                                    move = (rowindex + diff_row, cellindex + diff_column)
-                                    raise FoundGoodMove
-                            # step 5
-                            try:
-                                _ = grid[rowindex - 2 * diff_row][cellindex - 2 * diff_column]
-
-                            except IndexError:
-                                pass
-                            else:
-                                if not(grid[rowindex - 2 * diff_row][cellindex - 2 * diff_column].state in \
-                                        ("occupied", "checked")):
-                                    move = (rowindex - 2 * diff_row, cellindex - 2 * diff_column)
-                                    raise FoundGoodMove
+                            move = BattleShipGame.search_for_good_move(grid, rowindex, cellindex,
+                                                                       -diff_row, -diff_column)
+                            if not move is None:
+                                raise FoundGoodMove
 
             except FoundGoodMove:
+                print(move)
                 result = self.human_player.try_move(*move)
+
+            # No ships on fire
             else:
                 for _ in range(2048):
                     move=(randint(0, self._size), randint(0, self._size))

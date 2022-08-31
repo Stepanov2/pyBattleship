@@ -42,7 +42,7 @@ class TkinterBattleship(battleshipgame.BattleShipGame):
     @staticmethod
     def configure_enemy_button(button, state):
         _CHARSET_ENEMY = {'e': '.', 'o': '.', 'h': 'X', 's': '#', 'c': 'o'}
-        _BG_ENEMY = {'e': '#DDDDFF', 'o': '#DDDDFF', 'h': '#FF7777', 's': '#770000', 'c': '#AAAAAA'}
+        _BG_ENEMY = {'e': '#DDDDFF', 'o': '#DDDDFF', 'h': '#FF7777', 's': '#770000', 'c': '#CCCCCC'}
         _STATE_ENEMY = {'e': 'normal', 'o': 'normal', 'h': 'disabled', 's': 'disabled', 'c': 'disabled'}
         _RELIEF_ENEMY = {'e': 'raised', 'o': 'raised', 'h': 'raised', 's': 'raised', 'c': 'sunken'}
         state = state[0]
@@ -54,8 +54,8 @@ class TkinterBattleship(battleshipgame.BattleShipGame):
 
     @staticmethod
     def configure_own_button(button, state):
-        _CHARSET_OWN = {'e': '.', 'o': '.', 'h': 'X', 's': '#', 'c': 'o'}
-        _BG_OWN = {'e': '#DDDDFF', 'o': '#777777', 'h': '#FF7777', 's': '#770000', 'c': '#AAAAAA'}
+        _CHARSET_OWN = {'e': '.', 'o': '.', 'h': 'X', 's': '#', 'c': '.'}
+        _BG_OWN = {'e': '#DDDDFF', 'o': '#777777', 'h': '#FF7777', 's': '#770000', 'c': '#CCCCCC'}
         _STATE_OWN = {'e': 'normal', 'o': 'normal', 'h': 'disabled', 's': 'disabled', 'c': 'normal'}
         _RELIEF_OWN = {'e': 'sunken', 'o': 'raised', 'h': 'raised', 's': 'raised', 'c': 'sunken'}
         state = state[0]
