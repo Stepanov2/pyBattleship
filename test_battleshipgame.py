@@ -1,4 +1,7 @@
-"""RIP test. I tried. Unfortunately there wasn't enough time"""
+"""RIP test. I tried. Unfortunately there wasn't enough time.
+How it started: "Lets double check that string.lower() actually works. You know... Just in case :-)"
+How it ended: "@#$%@#$%!"
+"""
 import unittest
 import battleshipgame
 
