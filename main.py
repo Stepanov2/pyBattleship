@@ -1,16 +1,10 @@
-# This is a sample Python script.
-
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
-
-
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
-
-
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    print_hi('PyCharm')
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    print(
+    """    Hey! You tried to launch this file directly! This won't work!
+    This file... is useless, actually! It does nothing!
+    Launch battleshiptk.py to play a GUI version of the game
+    or battleshipconsole.tk to play a console version of the game.
+    Or you can instance a battleshipgame.Game() and create your own UI=)
+    IMPORTANT: if you want to read the code do it in following order:
+    config.py, battleshipgame.py, battleshiptk.py or battleshipconsole.py
+    """)

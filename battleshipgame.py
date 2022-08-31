@@ -381,11 +381,14 @@ class BattleShipGame():
         for i in ships:
             if not isinstance(i, int):
                 raise GameInitError(f'{i} is not a valid number of ships! Expecting int, 0 or more.')
+
+        # Quick and dirty check that ships occupy 33% of playfield or less
         sum_ships = 0
         for i in range(0, len(ships)):
             sum_ships += ships[i] * (4 - i)
         if sum_ships > size * size * 0.33:
             raise GameInitError(f"Ships can't occupy more than 33% of playfield")
+
         # If all is golden, initialize Ai player and Human player
         self.human_player = HumanPlayer(size, ships)
         self.ai_player = AiPlayer(size, ships)
@@ -394,6 +397,7 @@ class BattleShipGame():
         self._size = size
 
     def start(self):
+        """Try to start the game. If __init__ was successful, only thing preventing game from starting is this:"""
         if self.human_player.count_unplaced_ships != 0:
             raise GameInitError(f'Pesky human failed to place all his ships!')
         else:
@@ -401,106 +405,132 @@ class BattleShipGame():
 
     @property
     def winner(self):
+        """Returns winner (AI or Human) or None."""
         return self._game_winner
     def make_a_human_move(self, i, j):
-        # error_checking?
+        """Tries a move chosen by player and returns state of ai_player._grid[i][j] after the move.
+        try_move will raise MoveInvalidError if needed, so no additional input checking required."""
+
         if self._game_started and not self._game_winner:
             result = self.ai_player.try_move(i, j)
+            #
             if self.ai_player.count_ships == 0:
                 self._game_winner = 'Human'
                 raise GameOverException(f"{self._game_winner} won this game!")
             return result
     @classmethod
     def search_for_good_move(cls, grid, initial_row, initial_column, diff_row, diff_column):
-        if abs(diff_row) > 3 or abs(diff_column) > 3:
-            return None # searching too far
-        try:  # step 3
-            _ = grid[initial_row + diff_row][initial_column + diff_column]
+        """Helper that tries to find a cell in certain direction, that wasn't hit or checked.
+        See BattleshipGame.make_an_ai_move first.
+        Trigger warning: recursion"""
 
+        if abs(diff_row) > 3 or abs(diff_column) > 3:  # this should never happen, but just in case =)
+            return None
+
+        try:  # are we trying to search outside the grid?
+            _ = grid[initial_row + diff_row][initial_column + diff_column]
         except IndexError:
-            return None # searching outside grid
-        else:
+            return None  # no point in continuing then
+
+        else:  # is this cell a potential move?
             if grid[initial_row + diff_row][initial_column + diff_column].state in ("occupied", "empty"):
-                move = (initial_row + diff_row, initial_column + diff_column)      # still no cheating
+                move = (initial_row + diff_row, initial_column + diff_column)      # still no cheating=)
                 return move # we struck gold
 
+            # if this cell is 'checked'...
             elif grid[initial_row - diff_row][initial_column - diff_column].state == 'checked':
-                return None # this cell is outside current ship
+                return None # we need to search in opposite direction
+
+            # if none of the above:
             else: #searching deeper
                 return cls.search_for_good_move(grid, initial_row, initial_column,
                                             int(diff_row + copysign(1, diff_row)) if diff_row else 0 ,
                                             int(diff_column + copysign(1, diff_column)) if diff_column else 0)
-
-
+                                            # copysign (1, value) returns sign of value. As float....
 
     def make_an_ai_move(self):
+        """This tries to sink 'hit' ships. If there are None, does a random move instead
+        Important note: 
+        Unlike make_player_move,this returns list[outcome_of_move, tuple(coordinates_of_move)] instead of just outcome.
+        This is dumb and make_player_move should be changed to the same format for consistency"""  # todo <--
+
         if self._game_started and not self._game_winner:
             try:
 
                 """
+                Общий алгоритм:
                 1. находим подбитую клетку
-                2. если у подбитой клетки нет подбитых соседей, бьем в первого occupied или empty соседа
-                3. если у клетки есть подбитый сосед, то в том же направлении ищем либо 
+                2. если у подбитой клетки нет подбитых соседей, бьем в первого 'occupied' или 'empty' соседа
+                3. если у клетки есть подбитый сосед, то, в том же направлении ищем, либо 
                 -свободную клетку и фигачим по ней
                 -проверенную клетку или конец поля и прекращаем поиск.
                 4. то же, но в обратном направлении.
-                5. 
+                5. если ничего не нашлось, то:
+                во-первых, что-то в этой функции или внутренней логике игры сломано
+                во-вторых, AI всё равно попробует случайный ход из чувства глубокого сострадания к недалёкому прогеру)
+                Спасибо, AI =)
                 """
 
-
                 grid=self.human_player._playfield.grid
-                for rowindex, row in enumerate(grid):
-                    for cellindex, cell in enumerate(row):
-                        if cell.state == 'hit':  # step 1
+                for rowindex, row in enumerate(grid):  # for each row...
+                    for cellindex, cell in enumerate(row): # in every cell...
+                        if cell.state == 'hit':  # (step 1) searching for first 'hit' but not 'sunk' one
                             neighbours = self.get_neighbours(rowindex, cellindex)
-                            for neighbour in neighbours: # step 2
-                                if not (grid[neighbour[0]][neighbour[1]].state == 'hit'): #in ("empty", "occupied", "checked"):
+                            # getting indexes of four (or less than four if literally edge case;) ) adjacent cells
+                            for neighbour in neighbours: # (step 2)
+                                if not (grid[neighbour[0]][neighbour[1]].state == 'hit'):
                                     continue
                                 break
-                            else: #nobreak all neighbours aren't hit yet
+                            else:  # (nobreak) if none of the neighbours are hit yet:
                                 for i, j in neighbours:
                                     if grid[i][j].state != "checked":
                                         move = (i,j)
-                                        print('No neighbours')
+                                        # print('No neighbours')
                                         raise FoundGoodMove
+                                # note: above cycle should always result in a valid move
 
-                            for neighbour in neighbours: # prep for step 3 and 4 figuring out ship direction
+                            # preparation for steps 3 and 4. Figuring out ship's direction
+                            for neighbour in neighbours:
                                 if grid[neighbour[0]][neighbour[1]].state == 'hit':
                                     diff_row =  neighbour[0] - rowindex
                                     diff_column = neighbour[1] - cellindex
                                     break
-                            # step 3
+
+                            # step 3 searching in positive direction
                             move = BattleShipGame.search_for_good_move(grid,
                                                                        rowindex + diff_row,
                                                                        cellindex + diff_column,
                                                                        diff_row, diff_column)
                             if not move is None:
                                 raise FoundGoodMove
-                            # step 4
+
+                            # step 4 searching in negative direction
                             move = BattleShipGame.search_for_good_move(grid, rowindex, cellindex,
                                                                        -diff_row, -diff_column)
                             if not move is None:
                                 raise FoundGoodMove
 
+            # if at any point above we found a good move, we end up here:
             except FoundGoodMove:
-                print(move)
-                result = self.human_player.try_move(*move)
+                # print(move)
+                result = self.human_player.try_move(*move)  # note: can't return this just yet.
 
-            # No ships on fire
+            # if no ships on fire (or broken algorithm above)
             else:
-                for _ in range(2048):
+                for _ in range(2048):  # trying a random move 2048 times
                     move=(randint(0, self._size), randint(0, self._size))
                     try:
-                        result =  self.human_player.try_move(*move)
+                        result = self.human_player.try_move(*move)
                     except MoveInvalidError:
                         continue
                     else:
                         break
                 else: # no break
-                    raise GameOverException('AI was unable to make a move, stupid AI!')
+                    raise GameOverException('AI was unable to make a move, stupid AI!')  # more like stupid developer=)
 
             if result != 'sunk':
                 return [result, move]
+            # if last move sunk a ship, there is a chance, that game is over now.
             else:
                 if self.human_player.count_ships == 0:
                     self._game_winner = 'AI'
@@ -509,6 +539,7 @@ class BattleShipGame():
 
 
     def get_neighbours(self, row, column):
+        """Returns indexes for adjecent cells"""
         output = [(row-1, column), (row+1, column), (row, column-1), (row, column+1)]
         for index, value in enumerate(output):
             if not (0 <= value[0] < self._size) or not (0 <= value[1] < self._size):
@@ -524,42 +555,13 @@ class BattleShipGame():
 
 
 if __name__ == '__main__':
-    # # a = Playfield(8)
-    # # a.try_move(0, 0)
-    # # a.printgrid()
-    # # s = Ship(4)
-    # # s.configure(4, 3, True)
-    # # a.try_to_place_ship(s)
-    # # a.printgrid()
-    # # a.try_move(4, 3)
-    # # a.try_move(5, 3)
-    # # a.try_move(6, 3)
-    # # a.printgrid()
-    # # print(list(sorted(a._calculate_ship_surroundings(a._ships[0]))))
-    # # a.try_move(7, 3)
-    # # a.printgrid()
-    # #print(a._ships[0])
-    # g = BattleShipGame(8, (1,2,3,4))
-    # for i in range(len(g.ai_player._unplaced_ships)):
-    #     print(g.human_player._unplaced_ships[i]._size, end=' ')
-    # print('')
-    # for i in range(len(g.ai_player._unplaced_ships)):
-    #      print(g.human_player._unplaced_ships[i]._size, end=' ')
-    # print('')
-    # g.ai_player._playfield.print_grid()
-    # g.ai_player._unplaced_ships[0].configure(0, 0, True)
-    # g.ai_player._playfield.try_to_place_ship( g.ai_player._unplaced_ships[0])
-    # g.ai_player._unplaced_ships.pop(0)
-    # g.ai_player.place_ships_randomly()
-    # #g.ai_player.place_ships_randomly()
-    #
-    # g.ai_player._playfield.print_grid()
 
-
-
-
-    print("""Hey you tried to launch this file directly! This won't work!
+    print(
+    """    Hey! You tried to launch this file directly! This won't work!
     This file contains logic for running a battleship game.
-    To actually play the game instance a battleshipgame.Game() and provide the logic for user to interact with it.
-    or use the provided battleshiptk.py as an example.
+    Launch battleshiptk.py to play a GUI version of the game
+    or battleshipconsole.tk to play a console version of the game.
+    Or you can instance a battleshipgame.Game() and create your own UI=)
+    IMPORTANT: if you want to read the code do it in following order:
+    config.py, battleshipgame.py, battleshiptk.py or battleshipconsole.py
     """)
