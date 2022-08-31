@@ -109,7 +109,7 @@ class Playfield:
         elif cell.state == 'empty':
             self._grid[row][column].state = 'checked'
             #self.printgrid()
-            return False
+            return self._grid[row][column].state
         #Hit. Change cell state and...
         elif cell.state == 'occupied':
             self._grid[row][column].state = 'hit' # todo willitwork
@@ -125,7 +125,7 @@ class Playfield:
                     self._grid[row][column].state = 'sunk'
                 self._ships.pop(index)
             #self.printgrid()
-            return True
+            return self._grid[row][column].state
 
     def try_to_place_ship(self, ship): #todo test
         """Checks if space to be occupied by ship (and adjacent space) is free. Raises GameLogicError otherwise"""
@@ -308,19 +308,8 @@ class Player():
         except TypeError:
             raise GameInitError('Bad index')
 
-
-
-    def try_ai_move(self):
-        for i in range(1024):
-            try:
-                return self._playfield.try_move(randint(0,self._size))
-            except MoveInvalidError:
-                pass
-            else:
-                continue
-        else:
-            raise GameLogicError('AI was unable to hit anything, dumdum!')
-
+    def try_move(self, row, column):
+        return self._playfield.try_move(row, column)
 
 
 
@@ -335,8 +324,7 @@ class AiPlayer(Player):
     def _init_ships(self, size, ships):
 
         pass
-    def try_human_move(self, row, column):
-        return self._playfield.try_move(row, column)
+
 
 class HumanPlayer(Player):
 
@@ -374,6 +362,7 @@ class BattleShipGame():
         self.ai_player = AiPlayer(size, ships)
         self._game_started = False
         self._game_winner = None
+        self._size = size
 
     def start(self):
         if self.human_player.count_unplaced_ships != 0:
@@ -387,23 +376,32 @@ class BattleShipGame():
     def make_a_human_move(self, i, j):
         # error_checking?
         if self._game_started and not self._game_winner:
-            result = self.ai_player.try_human_move(i, j)
+            result = self.ai_player.try_move(i, j)
             if self.ai_player.count_ships == 0:
                 self._game_winner = 'Human'
                 raise GameOverException(f"{self._game_winner} won this game!")
             return result
     def make_an_ai_move(self):
         if self._game_started and not self._game_winner:
-            result = True
-            while True:
-                result = self.human_player.try_ai_move()
-                if result:
-                    yield True
+            for _ in range(1024):
+                move=(randint(0, self._size), randint(0, self._size))
+                try:
+                    result =  self.human_player.try_move(*move)
+                except MoveInvalidError:
+                    continue
                 else:
-                    if self.human_player.count_ships == 0:
-                        self._game_winner = 'AI'
-                        raise GameOverException(f"{self._game_winner} won this game!")
-                    return
+                    break
+            else: # no break
+                raise GameOverException('AI was unable to make a move, stupid AI!')
+            #result = self.human_player.try_ai_move()
+            if result != 'sunk':
+                return [result, move]
+            else:
+                if self.human_player.count_ships == 0:
+                    self._game_winner = 'AI'
+                    raise GameOverException(f"{self._game_winner} won this game!")
+                return [result, move]
+
 
 
 
