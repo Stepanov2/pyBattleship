@@ -72,7 +72,7 @@ class Playfield:
     def grid(self):
         return self._grid
 
-    def printgrid(self):  #for debug purposes
+    def print_grid(self):  #for debug purposes
         charset = {'e': '.  ', 'o': 'O  ', 'h': 'X  ', 's': '#  ', 'c': 'o  ' }
         print('   ', end='')
         [print(n, end='  ') for n in range(len(self._grid))]
@@ -433,14 +433,14 @@ if __name__ == '__main__':
     for i in range(len(g.ai_player._unplaced_ships)):
          print(g.human_player._unplaced_ships[i]._size, end=' ')
     print('')
-    g.ai_player._playfield.printgrid()
+    g.ai_player._playfield.print_grid()
     g.ai_player._unplaced_ships[0].configure(0, 0, True)
     g.ai_player._playfield.try_to_place_ship( g.ai_player._unplaced_ships[0])
     g.ai_player._unplaced_ships.pop(0)
     g.ai_player.place_ships_randomly()
     #g.ai_player.place_ships_randomly()
 
-    g.ai_player._playfield.printgrid()
+    g.ai_player._playfield.print_grid()
 
 
 

@@ -4,7 +4,7 @@ from time import sleep
 class ConsoleBattleship(battleshipgame.BattleShipGame):
 
 
-    def __init__(args, **kwargs):
+    def __init__(args, **kwargs): #todo self!
         size = kwargs['grid_size']
         ships = kwargs['ships']
         super().__init__(size, ships)
