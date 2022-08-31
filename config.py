@@ -2,7 +2,7 @@
 configs = []
 configs.append({
         'name': 'express',
-        'grid_size': 4,
+        'grid_size': 5,
         'ships': (0, 0, 2, 3),
         'tkinterconfig': {
             'pad_x': 15,

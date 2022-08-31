@@ -78,51 +78,62 @@ class ConsoleBattleship(battleshipgame.BattleShipGame):
             return
 
 
+if __name__ == '__main__':
+
+    # ======== chosing game parameters ========
 
 
-# ======== chosing game parameters ========
-
-
-# ¯\_(ツ)_/¯
-
-
-#========= init game ======================
-while True:
-
-
-    try:
-        game = ConsoleBattleship(**configs[1])
-    except battleshipgame.GameInitError as e:
-        print(e)
-        print('Someone must have tinkered with config.py!')
-        quit(1)
-
-    #========= query player ships ============
-
-    game.human_player.place_ships_randomly() # temp
-
-
-    try:
-        game.start()
-    except battleshipgame.GameInitError:
-        quit(42)
-
-    game.main_loop()
-
-    #========game.ended=========
-    if game.winner == 'Human':
-        game.print_enemy()
-        print("You've won, pal! Congrats!")
-    else:
-        game.print_own()
-        print("You've lost, pal! Touch luck!")
     while True:
-        query = input("Press enter to quit or type \"MORE\" to play again")
-        if not query.upper() in ('', 'MORE'):
+        playerinput = input("Type 1, 2 or 3 for small, medium or large game respectively! ")
+        try:
+            playerinput = int(playerinput)
+        except ValueError:
             continue
-        if query == '':
-            quit(0)
-        if query.upper() == 'MORE':
-            break
+        if not playerinput in range(1,4):
+            continue
+        chosenconfig = playerinput - 1
+        break
+
+
+
+
+    #========= init game ======================
+    while True:
+
+
+        try:
+            game = ConsoleBattleship(**configs[chosenconfig])
+        except battleshipgame.GameInitError as e:
+            print(e)
+            print('Someone must have tinkered with config.py!')
+            quit(1)
+
+        #========= query player ships ============
+
+        game.human_player.place_ships_randomly() # temp
+
+
+        try:
+            game.start()
+        except battleshipgame.GameInitError:
+            quit(42)
+
+        game.main_loop()
+
+        #========game.ended=========
+        if game.winner == 'Human':
+            game.print_enemy()
+            print("You've won, pal! Congrats!")
+        else:
+            game.print_own()
+            print("You've lost, pal! Touch luck!")
+        while True:
+            query = input("Press enter to quit or type \"MORE\" to play again")
+            if not query.upper() in ('', 'MORE'):
+                continue
+            if query == '':
+                quit(0)
+            if query.upper() == 'MORE':
+                break
 
 
