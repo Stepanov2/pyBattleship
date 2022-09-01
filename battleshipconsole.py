@@ -129,7 +129,6 @@ if __name__ == '__main__':
         game.human_player.place_ships_randomly()  # HAX!
 
         # ====== setup is completed =========
-
         try:
             game.start()
         except battleshipgame.GameInitError:
@@ -143,10 +142,9 @@ if __name__ == '__main__':
             print("You've won, pal! Congrats!")
         else:
             game.print_own()
-            print("You've lost, pal! Touch luck!")
+            print("You've lost, pal! Tough luck!")
 
         # ====== another go? =============
-
         while True:
             query = input("Press enter to quit or type \"MORE\" to play again")
             if not query.upper() in ('', 'MORE'):

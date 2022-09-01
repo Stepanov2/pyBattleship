@@ -31,7 +31,7 @@ class IterationSuccess(Exception):
     pass
 
 class GameOverException(Exception):
-    """Self-explanatory. UI should be watching for this one and acr accordingly."""
+    """Self-explanatory. UI should be watching for this one and act accordingly."""
     pass
 
 class FoundGoodMove(Exception):
@@ -118,7 +118,7 @@ class Playfield:
         if cell.state in ('hit', 'sunk', 'checked'):
             raise MoveInvalidError(f"Couldn't play this move since {row, column} was already {cell.state}")
 
-        # =========== Missed. Change cell state and return False==========
+        # =========== Missed. Change cell state and return 'checked'==========
         elif cell.state == 'empty':
             self._grid[row][column].state = 'checked'
             # self.printgrid()
@@ -133,7 +133,7 @@ class Playfield:
                 if ship.was_hit(row, column):
                     break
 
-            # ===...If it sunk, mark surrounding area as 'checked', mark ship as sunk, and remove ship from the list.
+            # ===...If it sunk, mark surrounding area as 'checked', mark ship as 'sunk', and remove ship from the list.
             if self._ships[index].hp == 0:
                 for row, column in self.calculate_ship_surroundings(self._ships[index]):
                     self._grid[row][column].state = 'checked'
@@ -273,6 +273,7 @@ class Player():
     @property
     def get_sunk_ship(self):  # todo I swear I use this somewhere. PyCharm insists I don't.
         return self._playfield.recently_sunk_ship
+
     def place_ships_randomly(self):
         """Tries (very hard) to place every ship onto playfield."""
         max=self._playfield.size - 1
@@ -285,7 +286,7 @@ class Player():
             for num_reshufles in range(40):  # do 40 attempts
                 self._playfield = copy.deepcopy(playfield_copy)  # roll back playfield for each attempt
                 generator_func = self.iter_unplaced_ships()  # restarting generator for each attempt...
-                # iter_unplaced_ships raises IterationSuccess if there are no more ships to place.
+                # (iter_unplaced_ships raises IterationSuccess if there are no more ships to place)
                 for ship in generator_func:  # ...of itering through every ship...
                     for attempts_to_place_current_ship in range(100):  # ...and trying 100 random placements for each.
                         ship.configure(randint(0, max), randint(0, max), choice((True, False)))  # Randomizing ship.
@@ -298,6 +299,7 @@ class Player():
                         break  # break the "for ship..." loop and start over
                 else:  # (nobreak) if nothing breaked the "for ship..." loop. We're done bby!
                     break  # out of for num_reshufles loop
+                    # todo previous two lines should not be necessary. In fact they are unreacheble.
 
         except IterationSuccess:
             # we telport here if we succeeded to place all ships.
@@ -397,7 +399,8 @@ class BattleShipGame():
         self._size = size
 
     def start(self):
-        """Try to start the game. If __init__ was successful, only thing preventing game from starting is this:"""
+        """Try to start the game. """
+        # If __init__ was successful, only thing that might prevent game from starting is this:
         if self.human_player.count_unplaced_ships != 0:
             raise GameInitError(f'Pesky human failed to place all his ships!')
         else:
@@ -405,11 +408,11 @@ class BattleShipGame():
 
     @property
     def winner(self):
-        """Returns winner (AI or Human) or None."""
+        """Returns winner ('AI' or 'Human') or None."""
         return self._game_winner
     def make_a_human_move(self, i, j):
         """Tries a move chosen by player and returns state of ai_player._grid[i][j] after the move.
-        try_move will raise MoveInvalidError if needed, so no additional input checking required."""
+        Playfield.try_move will raise MoveInvalidError if needed, so no additional input checking required."""
 
         if self._game_started and not self._game_winner:
             result = self.ai_player.try_move(i, j)
@@ -435,16 +438,16 @@ class BattleShipGame():
         else:  # is this cell a potential move?
             if grid[initial_row + diff_row][initial_column + diff_column].state in ("occupied", "empty"):
                 move = (initial_row + diff_row, initial_column + diff_column)      # still no cheating=)
-                return move # we struck gold
+                return move  # we struck gold!
 
             # if this cell is 'checked'...
             elif grid[initial_row - diff_row][initial_column - diff_column].state == 'checked':
-                return None # we need to search in opposite direction
+                return None  # we need to search in opposite direction instead
 
             # if none of the above:
-            else: #searching deeper
+            else:  # searching deeper
                 return cls.search_for_good_move(grid, initial_row, initial_column,
-                                            int(diff_row + copysign(1, diff_row)) if diff_row else 0 ,
+                                            int(diff_row + copysign(1, diff_row)) if diff_row else 0,
                                             int(diff_column + copysign(1, diff_column)) if diff_column else 0)
                                             # copysign (1, value) returns sign of value. As float....
 
@@ -476,8 +479,8 @@ class BattleShipGame():
                     for cellindex, cell in enumerate(row): # in every cell...
                         if cell.state == 'hit':  # (step 1) searching for first 'hit' but not 'sunk' one
                             neighbours = self.get_neighbours(rowindex, cellindex)
-                            # getting indexes of four (or less than four if literally edge case;) ) adjacent cells
-                            for neighbour in neighbours: # (step 2)
+                            # getting indexes of four adjacent cells (or less than four in literal edge case;) )
+                            for neighbour in neighbours:  # (step 2)
                                 if not (grid[neighbour[0]][neighbour[1]].state == 'hit'):
                                     continue
                                 break
@@ -539,19 +542,12 @@ class BattleShipGame():
 
 
     def get_neighbours(self, row, column):
-        """Returns indexes for adjecent cells"""
+        """Returns indexes for adjacent cells"""
         output = [(row-1, column), (row+1, column), (row, column-1), (row, column+1)]
         for index, value in enumerate(output):
             if not (0 <= value[0] < self._size) or not (0 <= value[1] < self._size):
                 output.pop(index)
         return output
-
-
-
-
-
-
-
 
 
 if __name__ == '__main__':

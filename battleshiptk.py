@@ -155,7 +155,7 @@ class TkinterBattleship(battleshipgame.BattleShipGame):
 
         # ============ Done =======
         """Man, tkinter is weird. The command parameter is weird. But bind is extra weird as it always gives 
-        so called <event> as a first parameter to your function. 
+        so called <event> as a first parameter to your function no matter what you do. 
         So rewriting    lambda e, i1=i, j1=j: self.own_hover(e, index=(i1, j1))
                 as      lambda i1=i, j1=j: self.own_hover(i1, j1)
         will result in calling self.own_hower(<event>, j1)
@@ -163,9 +163,9 @@ class TkinterBattleship(battleshipgame.BattleShipGame):
         Too bad I am not even using it for anything =)"""
 
         self.human_player.place_ships_randomly()  # only for debug, hopefully (edit: haha!)
-        self.start() # both of theese should be called by buttons
+        self.start() # both of these should be called by buttons
 
-        #========= Linking buttons to current grid state =============
+        # ========= Linking buttons to current grid state =============
         """I reeeeaaaaly should've turned this code into function and just call it every time something 
         changes in game state.
         Instead I spent quite a few hours designing tonnes of code that only updates the buttons that are
@@ -187,7 +187,7 @@ class TkinterBattleship(battleshipgame.BattleShipGame):
 
 
     def enemy_clicked(self, *args, **kwargs):
-        """This places your move. If you missed AI will make its move(s)"""
+        """This places your move. If you missed, AI will make its move(s)"""
 
         #  Do nothing for disabled buttons
         if self.enemy_buttons[args[0]][args[1]].cget('state') == 'disabled':

@@ -1,6 +1,6 @@
 """Configs for the game.
 User is fully responsible for breaking the game by changing this file =)
-At least there is a half-baked check, that shouldn't allow to get too many ships"""
+At least there is a half-baked check, that shouldn't allow to ask for too many ships"""
 
 configs = []
 
